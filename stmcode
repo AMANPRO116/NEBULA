@@ -1,0 +1,387 @@
+#include <Arduino_RouterBridge.h>
+#include <Servo.h>
+
+// ============================================================
+// NEUROFORGE - UNO Q
+// EXACT RPC METHODS FOR main.py
+// ============================================================
+
+
+// ------------------------------------------------------------
+// SERVO CHANNELS
+// ------------------------------------------------------------
+
+enum ServoChannel {
+  SHOULDER_1 = 0,
+  SHOULDER_2,
+  SHOULDER_3,
+  HEAD_TURN,
+  JAW_L,
+  JAW_R,
+  BROW_L,
+  BROW_R,
+  EYES_X,
+  EYES_Y,
+
+  NUM_SERVOS
+};
+
+
+// ------------------------------------------------------------
+// SERVO PINS
+// ------------------------------------------------------------
+
+const int servoPins[NUM_SERVOS] = {
+  2,   // SHOULDER_1
+  3,   // SHOULDER_2
+  4,   // SHOULDER_3
+  5,   // HEAD_TURN
+  6,   // JAW_L
+  7,   // JAW_R
+  8,   // BROW_L
+  9,   // BROW_R
+  10,  // EYES_X
+  11   // EYES_Y
+};
+
+
+// ------------------------------------------------------------
+// HOME POSITIONS
+// ------------------------------------------------------------
+
+const int homePosition[NUM_SERVOS] = {
+  90,  // SHOULDER_1
+  90,  // SHOULDER_2
+  90,  // SHOULDER_3
+  90,  // HEAD_TURN
+  0,   // JAW_L
+  0,   // JAW_R
+  90,  // BROW_L
+  90,  // BROW_R
+  90,  // EYES_X
+  90   // EYES_Y
+};
+
+
+// ------------------------------------------------------------
+// SERVO LIMITS
+// ------------------------------------------------------------
+
+const int servoMin[NUM_SERVOS] = {
+  70,
+  70,
+  70,
+  60,
+  0,
+  0,
+  70,
+  70,
+  65,
+  75
+};
+
+const int servoMax[NUM_SERVOS] = {
+  110,
+  110,
+  110,
+  120,
+  60,
+  60,
+  110,
+  110,
+  115,
+  105
+};
+
+
+// ------------------------------------------------------------
+// SERVO OBJECTS
+// ------------------------------------------------------------
+
+Servo servos[NUM_SERVOS];
+
+
+// ============================================================
+// HELPER
+// ============================================================
+
+void moveServo(int channel, int angle) {
+
+  if (channel < 0 || channel >= NUM_SERVOS) {
+    return;
+  }
+
+  angle = constrain(
+    angle,
+    servoMin[channel],
+    servoMax[channel]
+  );
+
+  servos[channel].write(angle);
+}
+
+
+// ============================================================
+// RPC: home_position()
+// ============================================================
+
+void home_position() {
+
+  for (int i = 0; i < NUM_SERVOS; i++) {
+
+    moveServo(
+      i,
+      homePosition[i]
+    );
+  }
+}
+
+
+// ============================================================
+// RPC: set_jaw(angle)
+// ============================================================
+
+void set_jaw(int angle) {
+
+  angle = constrain(angle, 0, 60);
+
+  moveServo(
+    JAW_L,
+    angle
+  );
+
+  moveServo(
+    JAW_R,
+    angle
+  );
+}
+
+
+// ============================================================
+// RPC: play_expression(expression)
+// ============================================================
+
+void play_expression(int expression) {
+
+  switch (expression) {
+
+    // IDLE
+    case 0:
+
+      home_position();
+
+      break;
+
+
+    // GREET
+    case 1:
+
+      moveServo(HEAD_TURN, 95);
+
+      moveServo(BROW_L, 100);
+      moveServo(BROW_R, 100);
+
+      moveServo(EYES_X, 90);
+      moveServo(EYES_Y, 95);
+
+      break;
+
+
+    // LISTENING
+    case 2:
+
+      moveServo(HEAD_TURN, 85);
+
+      moveServo(BROW_L, 95);
+      moveServo(BROW_R, 95);
+
+      moveServo(EYES_X, 90);
+      moveServo(EYES_Y, 90);
+
+      break;
+
+
+    // THINKING
+    case 3:
+
+      moveServo(HEAD_TURN, 75);
+
+      moveServo(BROW_L, 85);
+      moveServo(BROW_R, 100);
+
+      moveServo(EYES_X, 80);
+      moveServo(EYES_Y, 85);
+
+      break;
+
+
+    // HAPPY
+    case 4:
+
+      moveServo(HEAD_TURN, 90);
+
+      moveServo(BROW_L, 100);
+      moveServo(BROW_R, 100);
+
+      moveServo(EYES_X, 90);
+      moveServo(EYES_Y, 95);
+
+      break;
+
+
+    // BLINK
+    case 5:
+
+      moveServo(BROW_L, 78);
+      moveServo(BROW_R, 78);
+
+      delay(120);
+
+      moveServo(
+        BROW_L,
+        homePosition[BROW_L]
+      );
+
+      moveServo(
+        BROW_R,
+        homePosition[BROW_R]
+      );
+
+      break;
+  }
+}
+
+
+// ============================================================
+// RPC: look_at(x, y)
+// x and y = 0 to 100
+// ============================================================
+
+void look_at(
+  int x,
+  int y
+) {
+
+  x = constrain(x, 0, 100);
+  y = constrain(y, 0, 100);
+
+
+  int eyeX = map(
+    x,
+    0,
+    100,
+    70,
+    110
+  );
+
+
+  int eyeY = map(
+    y,
+    0,
+    100,
+    80,
+    100
+  );
+
+
+  int head = map(
+    x,
+    0,
+    100,
+    80,
+    100
+  );
+
+
+  moveServo(
+    EYES_X,
+    eyeX
+  );
+
+  moveServo(
+    EYES_Y,
+    eyeY
+  );
+
+  moveServo(
+    HEAD_TURN,
+    head
+  );
+}
+
+
+// ============================================================
+// RPC: get_status()
+// ============================================================
+
+int get_status() {
+  return 1;
+}
+
+
+// ============================================================
+// SETUP
+// ============================================================
+
+void setup() {
+
+  // Attach servos
+  for (int i = 0; i < NUM_SERVOS; i++) {
+
+    servos[i].attach(
+      servoPins[i]
+    );
+  }
+
+
+  // Move robot to home
+  home_position();
+
+
+  // START ARDUINO APP LAB BRIDGE
+  Bridge.begin();
+
+
+  // REGISTER METHODS
+  // THESE NAMES MUST MATCH main.py EXACTLY
+
+  Bridge.provide(
+    "home_position",
+    home_position
+  );
+
+  Bridge.provide(
+    "set_jaw",
+    set_jaw
+  );
+
+  Bridge.provide(
+    "play_expression",
+    play_expression
+  );
+
+  Bridge.provide(
+    "look_at",
+    look_at
+  );
+
+  Bridge.provide(
+    "get_status",
+    get_status
+  );
+}
+
+
+// ============================================================
+// LOOP
+// ============================================================
+
+void loop() {
+
+  // THIS IS CRITICAL
+  // Processes calls coming from Python main.py
+
+  Bridge.update();
+
+  delay(1);
+}
